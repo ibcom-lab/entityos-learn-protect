@@ -1,0 +1,19 @@
+﻿{
+	"template":
+	{
+		"roles":
+		[
+			{
+				"title": "AI Service",
+				"methods":
+				[
+					{"title": "CORE_DEBUG_LOG_MANAGE", "canuse": "N", "canadd": "Y", "canupdate": "N", "canremove": "Y", "guidmandatory": "N"},
+					{"title": "CORE_LOGOFF", "canuse": "Y", "canadd": "N", "canupdate": "N", "canremove": "N", "guidmandatory": "N"},
+					{"title": "CORE_MORE_SEARCH", "canuse": "Y", "canadd": "N", "canupdate": "N", "canremove": "N", "guidmandatory": "N"},
+					{"title": "LOGON", "canuse": "Y", "canadd": "N", "canupdate": "N", "canremove": "N", "guidmandatory": "N"}
+				],
+				"properties": []
+			}
+		]
+	}
+}
