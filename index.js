@@ -1,28 +1,17 @@
 /*
-	SELFDRIVEN SSI API
+	ENTITYOS STORAGE API
 	
-	https://ssi.api.slfdrvn.io
-	https://ssi.slfdrvn.io
+	https://storage.api.entityos,cloud
 
-	SSI Util Functions (For Future)
-	node_modules/ssifactory/
+	(For Future)
+	node_modules/storagefactory/
 
 	References:
-	https://selfdriven.foundation/trust
-	https://selfdriven.foundation/identity
+	https://aws - kms
 
-	https://selfdriven.foundation/apps#apis
-
-	“ssi-get-info
-	“ssi-generate-did-document”,
-	“ssi-generate-account”,
-	“ssi-generate-verifiable-credentials” // Use Octo DID as the issuer and User DID as the controller
-
-	“ssi-get-did-docs”
-	“ssi-get-did-conns”
+	"storage-protect-data-encrypt"
+	“storage-protect-cloud-save”
 	
-	“ssi-get-verifiable-presentations”
-
 	Depends on;
 	https://learn.entityos.cloud/learn-function-automation
 
@@ -72,12 +61,11 @@
 	"app-auth" checks the apikey sent against users in the space (as per settings.json)
 	
 	Run:
-	lambda-local -l index.js -t 9000 -e event-ssi-get-info-lab.json
-	lambda-local -l index.js -t 9000 -e event-ssi-generate-did-document-lab.json
-	lambda-local -l index.js -t 9000 -e event-ssi-generate-account-lab.json
+	lambda-local -l index.js -t 9000 -e event-storage-cloud-save-lab.json
+	lambda-local -l index.js -t 9000 -e event-storage-protect-encrypt-lab.json
 	
 	Upload to AWS Lambda:
-	zip -r ../selfdriven-ssi-api-DDMMMYYYY-n.zip *
+	zip -r ../entityos-storage-api-DDMMMYYYY-n.zip *
 */
 
 exports.handler = function (event, context, callback)
@@ -207,6 +195,8 @@ exports.handler = function (event, context, callback)
 							}
 						}
 					}
+
+					entityos.set({scope: '_data', value: request.body.data})
 
 					if (request.headers['x-auth-key'] != undefined)
 					{
@@ -631,13 +621,8 @@ exports.handler = function (event, context, callback)
 	
 					if (_.includes(
 					[
-						'ssi-get-info',
-						'ssi-generate-did-document',
-						'ssi-generate-account',
-						'ssi-get-did-documents',
-						'ssi-get-did-connections',
-						'ssi-get-verifiable-credentials',
-						'ssi-get-verifiable-presentations'
+						'storage-protect-data-encrypt',
+						'storage-protect-cloud-save'
 					],
 						method))
 					{
@@ -663,7 +648,7 @@ exports.handler = function (event, context, callback)
 
 			entityos.add(
 			{
-				name: 'app-process-ssi-get-info',
+				name: 'app-process-storage-protect-data-encrypt',
 				code: function ()
 				{
 					var request = entityos.get(
@@ -683,406 +668,49 @@ exports.handler = function (event, context, callback)
 					}
 					else
 					{
-						const settings = entityos.get(
-						{
-							scope: '_settings'
-						});
+						const settings = entityos.get({scope: '_settings'});
+						const dataToEncrypt = _.get(data, 'datatoencrypt')
 
-						let specifications = _.get(settings, 'ssi.specifications', {});
-						let frameworks = _.get(settings, 'ssi.frameworks', {});
-
-						var responseData =
-						{
-							"specifications": specifications,
-							"frameworks": frameworks
-						}
-
-						entityos.invoke('util-end',
-						{
-							method: 'app-process-ssi-get-info',
-							status: 'OK',
-							data: responseData
-						},
-						'200');
-					}
-				}
-			});
-
-			entityos.add(
-			{
-				name: 'app-process-ssi-generate-account',
-				code: function ()
-				{
-					entityos.invoke('app-process-ssi-generate-did-document')
-				}
-			});
-
-			entityos.add(
-			{
-				name: 'app-process-ssi-generate-did-document',
-				code: function ()
-				{
-					var entityosProtect = require('entityos/entityos.protect.js');
-
-					var request = entityos.get(
-					{
-						scope: '_request'
-					});
-
-					var data = request.body.data;
-
-					if (data == undefined)
-					{
-						entityos.invoke('util-end', 
-						{
-							error: 'Missing data.'
-						},
-						'403');
-					}
-					else
-					{
-						const settings = entityos.get(
-						{
-							scope: '_settings'
-						});
-
-						const curveType = _.get(data, 'curve', 'ed25519');
-
-						console.log('Curve: ' + curveType);
-			
-						const EC = require('elliptic').ec;
-						const ec = new EC(curveType);
-
-						const _curveKeyPair = ec.genKeyPair();
-
-						const curveKeys =
-						{
-							public: {hex: _curveKeyPair.getPublic('hex')},
-							private: {hex: _curveKeyPair.getPrivate('hex')}
-						}
-
-						console.log(curveType + ' Key Pair:')
-					
-						curveKeys.public.base58 = entityosProtect.convert(
-						{
-							input: 'hex',
-							output: 'base58',
-							text: curveKeys.public.hex
-						}).textConverted;
-
-						curveKeys.public.sha256Hex = entityosProtect.hash(
-						{
-							output: 'hex',
-							text: curveKeys.public.hex
-						}).textHashed;
-
-           				console.log(curveKeys);
-
-						const frameworkName = _.get(data, 'ssifrawework', 'dsociety').toLowerCase();
-					
-						//let specs = _.get(settings, 'ssi.specs', {});
-		
-					
-						// DID Document
-
-						const framework = _.find(settings.ssi.frameworks, function (framework)
-						{
-							return (framework.name == frameworkName)
-						});
-
-						if (framework == undefined)
+						if (dataToEncrypt == undefined)
 						{
 							entityos.invoke('util-end', 
 							{
-								error: 'Invalid framework'
+								error: 'No data to encrypt [datatoencrypt].'
 							},
 							'403');
 						}
 						else
 						{
-							let didMethodName = _.get(data, 'didmethod');
+							const encryptionService = _.get(data, 'service', 'default');
 
-							if (didMethodName == undefined)
+							if (encryptionService == 'default')
 							{
-								didMethodName = frameworkName
-							}
+								var keyID = _.get(settings, 'protect.keyID'); //hash of the "iv|key"
+								const key = _.get(settings, 'protect.key');
+								const iv = _.get(settings, 'protect.iv');
 
-							const didMethod = _.find(framework.did.methods, function (method)
-							{
-								return (method.name == didMethodName)
-							});
-
-							if (didMethod == undefined)
-							{
-								entityos.invoke('util-end', 
+								var dataEncrypted = entityosProtect.encrypt(
 								{
-									error: 'Invalid didmethod'
-								},
-								'403');
-							}
-							else
-							{
-								const ssiDID = 'did:' + didMethodName + ':' + curveKeys.public.sha256Hex;
-           						console.log('DID:', ssiDID);
-
-								const multibasePrefixes =
-								{
-									base58: 'z',
-									base16: 'f',
-									hex: 'f',
-									base32: 'b',
-									base64: 'Q',
-									base64padding: 'm',
-									base64urlsafe: 'u'
-								}
-								
-								const didMethodSpecification = _.find(settings.ssi.specifications, function (specification)
-								{
-									return (specification.name == didMethod.specification)
+									text: dataToEncrypt,
+									key: key,
+									iv: iv
 								});
-
-								if (didMethodSpecification == undefined)
-								{
-									entityos.invoke('util-end', 
-									{
-										error: 'Invalid didmethod.specification'
-									},
-									'403');
-								}
-								else
-								{
-									let didDocument = {
-										id: ssiDID,
-										verificationMethod:
-										[
-											{
-												id: ssiDID + '#keys-1',
-												type: didMethodSpecification.keyVerificationType,
-												controller: ssiDID
-										}],
-										authentication: [{
-											type: didMethodSpecification.keyAuthenticationType,
-											publicKey: ssiDID + '#keys-1'
-										}],
-										service: []
-									}
-
-									_.each(didDocument.verificationMethod, function (method)
-									{
-										if (_.includes(didMethodSpecification.publicKey.name, 'Multibase'))
-										{
-											method[didMethodSpecification.publicKey.name] =
-												multibasePrefixes[didMethodSpecification.publicKey.encoding] +
-												curveKeys.public[didMethodSpecification.publicKey.encoding];
-										}
-										else
-										{
-											method[didMethodSpecification.publicKey.name] = curveKeys.public[didMethodSpecification.publicKey.encoding];
-										}
-									});
-
-									didDocument['@context'] = 'https://www.w3.org/ns/did/v1';
-
-									didDocument.service.push(
-									{
-										id: ssiDID + '#did-resolver',
-										type: 'DIDResolver',
-										serviceEndpoint: 'http://ssi.slfdrvn.io'
-									});
-
-									console.log(didDocument)
-
-									const didDocumentFormatted = JSON.stringify(didDocument, null, 2)
-
-									if (request.body.method == 'ssi-generate-account')
-									{
-										entityos.set(
-										{
-											scope: 'ssi-generate-account',
-											value:
-											{
-												curveKeys: curveKeys,
-												didDocument: didDocument
-											}
-										});
-
-										entityos.invoke('app-process-ssi-generate-account-process');
-									}
-									else
-									{
-										var responseData =
-										{
-											"did": 
-											{
-												"document": didDocument,
-												"documentFormatted": didDocumentFormatted
-											}
-										}
-
-										entityos.invoke('util-end',
-										{
-											method: 'ssi-generate-did-document',
-											status: 'OK',
-											data: responseData
-										},
-										'200');
-									}
-								}
 							}
 						}
-					}
-				}
-			});
 
-			entityos.add(
-			{
-				name: 'app-process-ssi-generate-account-process',
-				code: function ()
-				{
-					entityos.invoke('app-process-ssi-generate-account-process-conversation')
-				}
-			});
-
-			entityos.add(
-			{
-				name: 'app-process-ssi-generate-account-process-conversation',
-				code: function ()
-				{
-					//Verify that the user making the API request has the authority to create the account
-					//Do this via messaging_conversation
-					//Requestor has to be the owner of the conversation that the post "Create account" relates to.
-					//Octo is a participant
-					//AuthKey == Conversation Post GUID
-
-					//request.userkey - for account.
-					//request.conversationkey or request.conversationpostkey
-
-					var request = entityos.get(
-					{
-						scope: '_request'
-					});
-
-					var data = request.body.data;
-
-					if (data == undefined)
-					{
-						data = {}
-					}
-
-					const keys = 
-					{
-						user: data.userkey,
-						conversation: data.conversationkey
-					}
-
-					if (keys.user == undefined || keys.post)
-					{
-						entityos.invoke('util-end', {error: 'Missing User &/or Conversation/Post Key'}, '401');
-					}
-					else
-					{
-						//This will prove both keys.
-						//Have to do double pass as no subsearch to owner user GUID.
-
-						entityos.cloud.search(
+						var responseData =
 						{
-							object: 'messaging_conversation',
-							fields: [{name: 'owner'}],
-							filters:
-							[
-								{
-									field: 'guid',
-									comparison: 'EQUAL_TO',
-									value: keys.conversation
-								},
-								{
-									field: 'sharing',
-									comparison: 'EQUAL_TO',
-									value: 1
-								}
-							],
-							callback: 'app-process-ssi-generate-account-process-conversation-response'
-						});
-					}
-				}
-			});
+							"dataencrypted": dataEncrypted,
+							"keyid": keyID
+						}
 
-			entityos.add(
-			{
-				name: 'app-process-ssi-generate-account-process-conversation-response',
-				code: function (param, response)
-				{
-					var request = entityos.get(
-					{
-						scope: '_request'
-					});
-
-					var data = request.body.data;
-
-					const keys = 
-					{
-						user: data.userkey,
-						conversation: data.conversationkey
-					}
-
-					if (response.data.rows.length == 0)
-					{
-						entityos.invoke('util-end', {error: 'Bad Conversation Key'}, '401');
-					}
-					else
-					{
-						const conversation = _.first(response.data.rows);
-
-						entityos.cloud.search(
+						entityos.invoke('util-end',
 						{
-							object: 'setup_user',
-							fields: [{name: 'createddate'}],
-							filters:
-							[
-								{
-									field: 'guid',
-									comparison: 'EQUAL_TO',
-									value: keys.user
-								},
-								{
-									field: 'id',
-									comparison: 'EQUAL_TO',
-									value: conversation.owner
-								}
-							],
-							callback: 'app-process-ssi-generate-account-process-user-response'
-						});
-					}
-				}
-			});
-
-			entityos.add(
-			{
-				name: 'app-process-ssi-generate-account-process-user-response',
-				code: function (param, response)
-				{
-					//Verify that the user making the API request has the authority to create the account
-					//Do this via messaging_conversation
-					//Requestor has to be the owner of the conversation that the post "Create account" relates to.
-					//Octo is a participant
-					//AuthKey == Conversation Post GUID
-
-					//request.userkey - for account.
-					//request.conversationpostkey
-
-					var request = entityos.get({scope: '_request'});
-					var data = request.body.data;
-
-					if (response.data.rows.length == 0)
-					{
-						entityos.invoke('util-end', {error: 'Bad User Key (Not The Conversation Owner)'}, '401');
-					}
-					else
-					{
-						let event = entityos.get({scope: '_event'});
-						event._user = _.first(response.data.rows);
-						entityos.set({scope: '_event', value: event});
-						entityos.invoke('app-process-ssi-generate-account-process-save')
+							method: 'app-process-storage-protect-data-encrypt',
+							status: 'OK',
+							data: responseData
+						},
+						'200');
 					}
 				}
 			});
@@ -1246,74 +874,6 @@ exports.handler = function (event, context, callback)
 					'200');
 				}
 			});
-
-			entityos.add(
-			{
-				name: 'app-process-ssi-generate-verifiable-credential',
-				code: function ()
-				{
-					// Based on userkey/action(achievement)key
-								/*{
-					"@context": [
-						"https://www.w3.org/2018/credentials/v1",
-						"https://www.w3.org/2018/credentials/examples/v1"
-					],
-					"id": "https://example.org/credentials/abcdef",
-					"type": ["VerifiableCredential", "SkillCredential"],
-					"issuer": "did:dsociety:7c6d037fdd1eb7c1dd0ab4af1c3238492ecdd5c349cf7863d59f00c963f59b67",
-					"issuanceDate": "2024-06-24T14:13:44Z",
-					"credentialSubject": {
-						"id": "did:example:123456789abcdefghi",
-						"skillId": "abcdef",
-						"skillName": "Example Skill",
-						"description": "This credential certifies the holder has demonstrated the skill of Example Skill."
-					},
-					"proof": {
-						"type": "Ed25519Signature2018",
-						"created": "2024-06-24T14:13:44Z",
-						"verificationMethod": "did:dsociety:7c6d037fdd1eb7c1dd0ab4af1c3238492ecdd5c349cf7863d59f00c963f59b67#keys-1",
-						"proofPurpose": "assertionMethod",
-						"jws": "eyJhbGciOiJFZERTQSJ9..."
-					}
-					}
-					*/
-
-					const jwt = require('jsonwebtoken');
-					const crypto = require('crypto');
-
-					// Replace these values with your actual key data
-					const privateKey = Buffer.from('N6S2b1LDGjN1nxKGcfMs6zzHaioiKLAfKSRQw6Tig3DtZ2uv6LNahCu5MyWSpihYE6NwY5kshYe8Bba2ZbQVEfLi', 'base64');
-					const publicKey = 'did:dsociety:7c6d037fdd1eb7c1dd0ab4af1c3238492ecdd5c349cf7863d59f00c963f59b67#keys-1';
-
-					// The verifiable credential payload
-					const payload = {
-						"@context": [
-							"https://www.w3.org/2018/credentials/v1",
-							"https://www.w3.org/2018/credentials/examples/v1"
-						],
-						"id": "https://example.org/credentials/abcdef",
-						"type": ["VerifiableCredential", "SkillCredential"],
-						"issuer": "did:dsociety:7c6d037fdd1eb7c1dd0ab4af1c3238492ecdd5c349cf7863d59f00c963f59b67",
-						"issuanceDate": new Date().toISOString(),
-						"credentialSubject": {
-							"id": "did:example:123456789abcdefghi",
-							"skillId": "abcdef",
-							"skillName": "Example Skill",
-							"description": "This credential certifies the holder has demonstrated the skill of Example Skill."
-						}
-					};
-
-					// Generate the JWS
-					const token = jwt.sign(payload, privateKey, {
-						algorithm: 'EdDSA',
-						keyid: publicKey
-					});
-
-					console.log('JWS:', token);
-
-				}
-			});
-
 
 			// !!!! APP STARTS HERE; Initialise the app; app-init invokes app-start if authentication OK
 			entityos.invoke('app-init');
