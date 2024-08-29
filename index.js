@@ -49,8 +49,6 @@
 			scope: 'app',
 			context: 'request'
 		});
-		
-		>
 
 		{ 
 			body: {},
@@ -62,7 +60,7 @@
 	
 	Run:
 	lambda-local -l index.js -t 9000 -e event-storage-cloud-save-lab.json
-	lambda-local -l index.js -t 9000 -e event-storage-protect-encrypt-lab.json
+	lambda-local -l index.js -t 9000 -e event-storage-protect-data-encrypt-lab.json
 	
 	Upload to AWS Lambda:
 	zip -r ../entityos-storage-api-DDMMMYYYY-n.zip *
@@ -132,6 +130,7 @@ exports.handler = function (event, context, callback)
 	const promise = new Promise(function(resolve, reject)
 	{	
 		entityos.init(main);
+		//main();
 
 		function main(err, data)
 		{
@@ -669,13 +668,13 @@ exports.handler = function (event, context, callback)
 					else
 					{
 						const settings = entityos.get({scope: '_settings'});
-						const dataToEncrypt = _.get(data, 'datatoencrypt')
+						const dataToEncrypt = _.get(data, 'encrypt')
 
 						if (dataToEncrypt == undefined)
 						{
 							entityos.invoke('util-end', 
 							{
-								error: 'No data to encrypt [datatoencrypt].'
+								error: 'No data to encrypt [encrypt].'
 							},
 							'403');
 						}
@@ -685,41 +684,86 @@ exports.handler = function (event, context, callback)
 
 							if (encryptionService == 'default')
 							{
-								var keyID = _.get(settings, 'protect.keyID'); //hash of the "iv|key"
-								const key = _.get(settings, 'protect.key');
-								const iv = _.get(settings, 'protect.iv');
+								const keys = _.get(settings, 'protect.keys');
+								const keyHash = _.get(event, 'keyhash'); //hash of the sha256/base58 "key";
 
-								var dataEncrypted = entityosProtect.encrypt(
+								let _key;
+
+								console.log(settings)
+
+								if (keyHash == undefined)
 								{
-									text: dataToEncrypt,
-									key: key,
-									iv: iv
-								});
+									_key = _.find(keys, function (key)
+									{
+										return key.default
+									});
+
+									if (_key != undefined)
+									{
+										_key.keyHash = entityosProtect.hash({text: _key.key, output: 'base58'}).textHashed;
+									}
+								}
+								else
+								{
+									_key = _.find(keys, function (key)
+									{
+										return key.keyhash == keyHash;
+									});
+								}
+
+								if (_key == undefined)
+								{
+									entityos.invoke('util-end',
+									{
+										method: 'storage-protect-data-encrypt',
+										status: 'ER',
+										data: {error: 'Key not found'}
+									},
+									'401');
+								}
+								else
+								{
+									const iv = _.get(settings, 'protect.iv');
+							
+									var dataEncrypted = entityosProtect.encrypt(
+									{
+										text: dataToEncrypt,
+										key: _key.key,
+										iv: _key.iv
+									}).textEncrypted;
+
+									if (_key.id == undefined)
+									{
+										_key.id = _.truncate(_key.keyhash, {length: 6});
+									}
+
+									var responseData =
+									{
+										"dataencrypted": dataEncrypted,
+										"keyhash": _key.keyHash,
+										"keyid": _key.id
+									}
+
+									entityos.invoke('util-end',
+									{
+										method: 'storage-protect-data-encrypt',
+										status: 'OK',
+										data: responseData
+									},
+									'200');
+								}
 							}
 						}
-
-						var responseData =
-						{
-							"dataencrypted": dataEncrypted,
-							"keyid": keyID
-						}
-
-						entityos.invoke('util-end',
-						{
-							method: 'app-process-storage-protect-data-encrypt',
-							status: 'OK',
-							data: responseData
-						},
-						'200');
 					}
 				}
 			});
 
 			entityos.add(
 			{
-				name: 'app-process-ssi-generate-account-process-save',
+				name: 'app-process-storage-protect-cloud-save',
 				code: function (param, response)
 				{
+					// 
 					const request = entityos.get({scope: '_request'});
 					const data = request.body.data;
 					const event = entityos.get({scope: '_event'});

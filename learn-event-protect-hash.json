@@ -1,0 +1,41 @@
+{
+    "method": "util-protect-hash",
+    "hashMethod": "sha256",
+    "output": "base64",
+    "data":
+   {
+        "issued": {
+            "by": {
+                "sdi": "c1dd111e-2217-4ad2-a812-dea6f4583b13",
+                "name": "selfdriven Foundation",
+                "notes": "Issued to self as root of trust."
+            }
+        },
+        "root": "true",
+        "version": "pem",
+        "sdi": "c1dd111e-2217-4ad2-a812-dea6f4583b13",
+        "identifiers": [
+            {
+                "data": {
+                    "category": "understanding-of-self",
+                    "type": "virtual",
+                    "context": "communication",
+                    "attribute": "public-key-rsa-spki",
+                    "value": [
+                        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3OYqTDGUsRnIxpX3tIoJ",
+                        "vpEWRpJeR+mBc5cowwXycWVI9WxavK0XNyEMKCKIc20GD3MKFaMAFpctx4ZSqEh4",
+                        "rGIbHWnRHUs5BDXdnXrq4loOq9RdRVqFtXK53V9LuFpSiu/QZJwfyrmWR8Vc7mgv",
+                        "OqSPvIc9lg/5HUui5lj9Kud6QQ8iX1hJ4IZixpOHyT1xLj4a9XNgPRmM4MG6eXMA",
+                        "q5aIlmLGmyJiHXShrz2N0YkzJWzHXPMgvlqTo2kFPti4+EVyuTNBYHXV5F7zbFFO",
+                        "bNl80f3vijpdRPhaDkQq5eG4GnsFndk2+oeM6UXwGqhfaIAQzS5Ftz60LqmIwk5F",
+                        "kwIDAQAB"
+                    ]
+                },
+                "verification": {
+                    "version": "sha256-base64-aes-256-cbc",
+                    "signature": "2Z/Sg3WXVCHgPNJVcEepmHT4/T00zFXPbl1QCbPQyeh50S54nFM/jkQnzdn1JZHjDpfM75RfcFcGJ/4LRn53Lx7ZNDuzLhsLHP1iASAqFD/0uhPvx/JNndYOUksevw84YygQzL2Net2nmZYt3E9E8w7pyJkR4/bo0qeDi1ZJFBOzCovcShD66WXwK8fLHJsr9oaVjqt5fuexS/9AICV+5NDgTqEWbpfqvF+YKsrDSB+Ur4nTT9WpZqcvSb8013Rjvei0mA680whJp2onEabf0wo0pYUi+k1Dmiz8YgavNfeeS3g4QLvMoZHXlq+JkXD/gX5oRLvXw1EnpDO/u9G33g=="
+                }
+            }
+        ]
+    }
+}	

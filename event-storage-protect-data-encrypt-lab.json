@@ -1,0 +1,12 @@
+{
+	"body": {
+		"method": "storage-protect-data-encrypt",
+		"context": "learn-storage-lab",
+		"data":
+		{
+			"encrypt": ["Hello",  "World"]
+		}
+	},
+	"queryStringParameters": {},
+	"headers": {}
+}
