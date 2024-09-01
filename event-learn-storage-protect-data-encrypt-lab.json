@@ -4,7 +4,9 @@
 		"context": "learn-storage-lab",
 		"data":
 		{
-			"encrypt": ["Hello",  "World"]
+			"_encrypt": "Hello",
+			"__encrypt": ["Hello",  "World"],
+			"encrypt": [{"data":"Hello"},  "World"]
 		}
 	},
 	"queryStringParameters": {},

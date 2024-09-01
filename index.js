@@ -59,11 +59,13 @@
 	"app-auth" checks the apikey sent against users in the space (as per settings.json)
 	
 	Run:
-	lambda-local -l index.js -t 9000 -e event-storage-cloud-save-lab.json
-	lambda-local -l index.js -t 9000 -e event-storage-protect-data-encrypt-lab.json
+	lambda-local -l index.js -t 9000 -e event-learn-storage-protect-data-encrypt-lab.json
+	lambda-local -l index.js -t 9000 -e event-learn-storage-protect-data-decrypt-lab.json
+
+	lambda-local -l index.js -t 9000 -e event-learn-storage-cloud-save-lab.json // todo
 	
 	Upload to AWS Lambda:
-	zip -r ../entityos-storage-api-DDMMMYYYY-n.zip *
+	zip -r ../entityos-learn-storage-DDMMMYYYY-n.zip *
 */
 
 exports.handler = function (event, context, callback)
@@ -621,6 +623,7 @@ exports.handler = function (event, context, callback)
 					if (_.includes(
 					[
 						'storage-protect-data-encrypt',
+						'storage-protect-data-decrypt',
 						'storage-protect-cloud-save'
 					],
 						method))
@@ -668,7 +671,7 @@ exports.handler = function (event, context, callback)
 					else
 					{
 						const settings = entityos.get({scope: '_settings'});
-						const dataToEncrypt = _.get(data, 'encrypt')
+						var dataToEncrypt = _.get(data, 'encrypt')
 
 						if (dataToEncrypt == undefined)
 						{
@@ -688,8 +691,6 @@ exports.handler = function (event, context, callback)
 								const keyHash = _.get(event, 'keyhash'); //hash of the sha256/base58 "key";
 
 								let _key;
-
-								console.log(settings)
 
 								if (keyHash == undefined)
 								{
@@ -723,15 +724,43 @@ exports.handler = function (event, context, callback)
 								}
 								else
 								{
-									const iv = _.get(settings, 'protect.iv');
-							
-									var dataEncrypted = entityosProtect.encrypt(
+									if (_.isString(dataToEncrypt))
 									{
-										text: dataToEncrypt,
-										key: _key.key,
-										iv: _key.iv
-									}).textEncrypted;
+										dataToEncypt = [dataToEncrypt]
+									}
 
+									console.log(dataToEncrypt);
+
+									let dataToEncryptProcessed = [];
+
+									_.each(dataToEncrypt, function (_dataToEncrypt)
+									{
+										if (_.isString(_dataToEncrypt))
+										{
+											dataToEncryptProcessed.push(
+											{
+												data: _dataToEncrypt,
+												encrypted: 	entityosProtect.encrypt(
+												{
+													text: _dataToEncrypt,
+													key: _key.key,
+													iv: _key.iv
+												}).textEncrypted
+											})
+										}
+										else
+										{
+											_dataToEncrypt.encrypted = entityosProtect.encrypt(
+											{
+												text: _dataToEncrypt.data,
+												key: _key.key,
+												iv: _key.iv
+											}).textEncrypted;
+
+											dataToEncryptProcessed.push(_dataToEncrypt);
+										}
+									});
+							
 									if (_key.id == undefined)
 									{
 										_key.id = _.truncate(_key.keyhash, {length: 6});
@@ -739,7 +768,7 @@ exports.handler = function (event, context, callback)
 
 									var responseData =
 									{
-										"dataencrypted": dataEncrypted,
+										"encrypted": dataToEncryptProcessed,
 										"keyhash": _key.keyHash,
 										"keyid": _key.id
 									}
@@ -760,162 +789,140 @@ exports.handler = function (event, context, callback)
 
 			entityos.add(
 			{
-				name: 'app-process-storage-protect-cloud-save',
-				code: function (param, response)
+				name: 'app-process-storage-protect-data-decrypt',
+				code: function ()
 				{
-					// 
-					const request = entityos.get({scope: '_request'});
-					const data = request.body.data;
-					const event = entityos.get({scope: '_event'});
-
-					if (response == undefined)
+					var request = entityos.get(
 					{
-						entityos.cloud.search(
+						scope: '_request'
+					});
+
+					var data = request.body.data;
+
+					if (data == undefined)
+					{
+						entityos.invoke('util-end', 
 						{
-							object: 'core_protect_key',
-							fields: [{name: 'key'}, {name: 'notes'}],
-							filters:
-							[
-								{
-									field: 'object',
-									comparison: 'EQUAL_TO',
-									value: 22
-								},
-								{
-									field: 'objectcontext',
-									comparison: 'EQUAL_TO',
-									value: event._user.id
-								},
-								{
-									field: 'category',
-									comparison: 'EQUAL_TO',
-									value: 4
-								},
-								{
-									field: 'type',
-									comparison: 'EQUAL_TO',
-									value: 2
-								},
-								{
-									field: 'private',
-									comparison: 'EQUAL_TO',
-									value: 'Y'
-								},
-								{
-									field: 'title',
-									comparison: 'EQUAL_TO',
-									value: '[ssi-account-fully-managed]'
-								}
-							],
-							callback: 'app-process-ssi-generate-account-process-save'
-						});
+							error: 'Missing data.'
+						},
+						'403');
 					}
 					else
 					{
-						let ssiAccount = entityos.get(
+						const settings = entityos.get({scope: '_settings'});
+						var dataToDecrypt = _.get(data, 'decrypt')
+
+						if (dataToDecrypt == undefined)
 						{
-							scope: 'ssi-generate-account'
-						});
-
-						let keyID;
-						let keyNotes;
-
-						if (response.data.rows != 0)
-						{
-							keyID = _.first(response.data.rows).id;
-							keyNotes = _.first(response.data.rows).notes;
-						}
-
-						const cloudSave = (keyID == undefined || (keyID != undefined && data.reset == true)); 
-
-						if (!cloudSave)
-						{
-							let keyDIDDocument;
-
-							if (_.startsWith(keyNotes, '{'))
+							entityos.invoke('util-end', 
 							{
-								keyDIDDocument = JSON.parse(keyNotes);
-							}
-
-							entityos.invoke('util-end',
-							{	
-								method: 'ssi-generate-account',
-								data:
-								{
-									didDocument: keyDIDDocument,
-									warning: 'Identity (SSI) account already exists - use reset:true to reset it.'
-								}
-							}, '200');
+								error: 'No data to encrypt [decrypt].'
+							},
+							'403');
 						}
 						else
 						{
-							//AES encrypt the mnemonic|passphrase using Octo settings
+							const encryptionService = _.get(data, 'service', 'default');
 
-							let keyInfo = JSON.stringify(
+							if (encryptionService == 'default')
 							{
-								publicHex: ssiAccount.curveKeys.publicHex,
-								privateHex: ssiAccount.curveKeys.privateHex
-							});
+								const keys = _.get(settings, 'protect.keys');
+								const keyHash = _.get(event, 'keyhash'); //hash of the sha256/base58 "key";
 
-							const settings = entityos.get({scope: '_settings'});
+								let _key;
 
-							const key = _.get(settings, 'protect.key');
-							const iv = _.get(settings, 'protect.iv');
-
-							// Key IV Stored Against this Octo API User.
-							const encrypted = entityosProtect.encrypt(
-							{
-								text: keyInfo,
-								key: key,
-								iv: iv
-							});
-
-							const notes = JSON.stringify(ssiAccount.didDocument);
-
-							entityos.cloud.save(
-							{
-								object: 'core_protect_key',
-								data:
+								if (keyHash == undefined)
 								{
-									category: 4, //identity
-									key: encrypted.textEncrypted, //public & private keys - encypted
-									object: 22,
-									objectcontext: event._user.id,
-									type: 2,
-									private: 'Y', // To Octo (API) has custody
-									title: '[ssi-account-fully-managed]',
-									notes: notes,
-									id: keyID
-								},
-								callback: 'app-process-ssi-generate-account-process-finalise'
-							});
+									_key = _.find(keys, function (key)
+									{
+										return key.default
+									});
+
+									if (_key != undefined)
+									{
+										_key.keyHash = entityosProtect.hash({text: _key.key, output: 'base58'}).textHashed;
+									}
+								}
+								else
+								{
+									_key = _.find(keys, function (key)
+									{
+										return key.keyhash == keyHash;
+									});
+								}
+
+								if (_key == undefined)
+								{
+									entityos.invoke('util-end',
+									{
+										method: 'storage-protect-data-decrypt',
+										status: 'ER',
+										data: {error: 'Key not found'}
+									},
+									'401');
+								}
+								else
+								{
+									if (_.isString(dataToDecrypt))
+									{
+										dataToDecrypt = [dataToDecrypt]
+									}
+
+									console.log(dataToDecrypt);
+
+									let dataToDecryptProcessed = [];
+
+									_.each(dataToDecrypt, function (_dataToDecrypt)
+									{
+										if (_.isString(_dataToDecrypt))
+										{
+											dataToDecryptProcessed.push(
+											{
+												encrypted: _dataToDecrypt,
+												data: entityosProtect.decrypt(
+												{
+													text: _dataToDecrypt,
+													key: _key.key,
+													iv: _key.iv
+												}).textDecrypted
+											})
+										}
+										else
+										{
+											_dataToDecrypt.data = entityosProtect.decrypt(
+											{
+												text: _dataToDecrypt.encrypted,
+												key: _key.key,
+												iv: _key.iv
+											}).textDecrypted;
+
+											dataToDecryptProcessed.push(_dataToDecrypt);
+										}
+									});
+							
+									if (_key.id == undefined)
+									{
+										_key.id = _.truncate(_key.keyhash, {length: 6});
+									}
+
+									var responseData =
+									{
+										"encrypted": dataToDecryptProcessed,
+										"keyhash": _key.keyHash,
+										"keyid": _key.id
+									}
+
+									entityos.invoke('util-end',
+									{
+										method: 'storage-protect-data-decrypt',
+										status: 'OK',
+										data: responseData
+									},
+									'200');
+								}
+							}
 						}
 					}
-				}
-			});
-
-			entityos.add(
-			{
-				name: 'app-process-ssi-generate-account-process-finalise',
-				code: function (param)
-				{
-					let ssiAccount = entityos.get(
-					{
-						scope: 'ssi-generate-account'
-					});
-
-					var responseData =
-					{
-						didDocument: ssiAccount.didDocument
-					}
-					
-					entityos.invoke('util-end',
-					{
-						method: 'ssi-generate-account',
-						status: 'OK',
-						data: responseData
-					},
-					'200');
 				}
 			});
 

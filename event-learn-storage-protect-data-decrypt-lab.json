@@ -1,0 +1,14 @@
+{
+	"body": {
+		"method": "storage-protect-data-decrypt",
+		"context": "learn-storage-lab",
+		"data":
+		{
+			"_decrypt": "ac689bf6badb4eba68b80a9df2d24301",
+			"__decrypt": ["ac689bf6badb4eba68b80a9df2d24301",  "1727f79fb8121935a81f7362f1e90131"],
+			"decrypt": [{"encrypted":"ac689bf6badb4eba68b80a9df2d24301"},  "1727f79fb8121935a81f7362f1e90131"]
+		}
+	},
+	"queryStringParameters": {},
+	"headers": {}
+}
