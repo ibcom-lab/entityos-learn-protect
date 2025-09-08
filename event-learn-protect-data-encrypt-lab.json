@@ -1,7 +1,7 @@
 {
 	"body": {
-		"method": "storage-protect-data-encrypt",
-		"context": "learn-storage-lab",
+		"method": "protect-data-encrypt",
+		"context": "learn-protect-lab",
 		"data":
 		{
 			"_encrypt": "Hello",

@@ -1,7 +1,7 @@
 {
 	"body": {
-		"method": "storage-protect-data-decrypt",
-		"context": "learn-storage-lab",
+		"method": "protect-data-decrypt",
+		"context": "learn-protect-lab",
 		"data":
 		{
 			"_decrypt": "ac689bf6badb4eba68b80a9df2d24301",

@@ -1,16 +1,16 @@
 /*
-	ENTITYOS STORAGE API
+	ENTITYOS PROTECT API / FACTORY
 	
 	https://storage.api.entityos,cloud
 
 	(For Future)
-	node_modules/storagefactory/
+	node_modules/protectfactory/
 
 	References:
 	https://aws - kms
 
-	"storage-protect-data-encrypt"
-	“storage-protect-cloud-save”
+	"protect-data-encrypt"
+	"protect-data-decrypt"
 	
 	Depends on;
 	https://learn.entityos.cloud/learn-function-automation
@@ -59,13 +59,11 @@
 	"app-auth" checks the apikey sent against users in the space (as per settings.json)
 	
 	Run:
-	lambda-local -l index.js -t 9000 -e event-learn-storage-protect-data-encrypt-lab.json
-	lambda-local -l index.js -t 9000 -e event-learn-storage-protect-data-decrypt-lab.json
-
-	lambda-local -l index.js -t 9000 -e event-learn-storage-cloud-save-lab.json // todo
+	lambda-local -l index.js -t 9000 -e event-learn-protect-data-encrypt-lab.json
+	lambda-local -l index.js -t 9000 -e event-learn-protect-data-decrypt-lab.json
 	
 	Upload to AWS Lambda:
-	zip -r ../entityos-learn-storage-DDMMMYYYY-n.zip *
+	zip -r ../entityos-learn-protect-DDMMMYYYY-n.zip *
 */
 
 exports.handler = function (event, context, callback)
@@ -622,9 +620,9 @@ exports.handler = function (event, context, callback)
 	
 					if (_.includes(
 					[
-						'storage-protect-data-encrypt',
-						'storage-protect-data-decrypt',
-						'storage-protect-cloud-save'
+						'protect-data-encrypt',
+						'protect-data-decrypt',
+						'protect-data-hash'
 					],
 						method))
 					{
